@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { graphql } from "ponder";
+import { sendSlackAlert } from "../handlers/slackHandler";
 
 const app = new Hono();
 
@@ -289,6 +290,22 @@ app.get("/api/historical-l1-data", async (c) => {
     console.error("Error fetching historical L1 data:", error);
     return c.json([]);
   }
+});
+
+app.post("/api/test-alerts", async (c) => {
+  const alertMessage = 'This is a test alert from the Slack bot!';
+  
+  try {
+    await sendSlackAlert(alertMessage);
+    return c.json({ message: "Test alert sent!" });
+  } catch (error) {
+    console.error("Error sending Slack alert:", error);
+    return c.json({ error: "Failed to send test alert" }, 500);
+  }
+});
+
+app.get("/api/health", (c) => {
+  return c.json({ status: "OK" });
 });
 
 
