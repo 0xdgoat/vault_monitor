@@ -305,7 +305,7 @@ app.post("/api/test-alerts", async (c) => {
 });
 
 app.get("/api/health", (c) => {
-  return c.json({ status: "OK" });
+  return c.json({ status: "OKiee" });
 });
 
 

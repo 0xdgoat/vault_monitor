@@ -4,7 +4,7 @@
 # pkill -f "ponder" || true
 
 # Initial starting block
-START_BLOCK=20000001  # Starting just after the failing range (19422983 to 19423033)
+START_BLOCK=20459290  # Starting just after the failing range (19422983 to 19423033)
 
 # Variables for loop/hang detection & skipping
 PREVIOUS_START_BLOCK=-1

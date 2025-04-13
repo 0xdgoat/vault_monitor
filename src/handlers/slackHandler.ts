@@ -1,8 +1,5 @@
 import axios from 'axios';
-
-// File: /Users/ishansingh/Desktop/vault_monitor/src/scripts/slackHandler.ts
-
-
+import dotenv from 'dotenv';
 /**
  * Sends an alert message to a Slack channel.
  * 
@@ -10,6 +7,11 @@ import axios from 'axios';
  * @param {string} channelId - The ID of the Slack channel to send the message to.
  * @param {string} message - The message to send.
  */
+
+dotenv.config();
+const slackToken =  process.env.SLACK_BOT_TOKEN as string; // Replace with your Slack bot token
+const channelId = process.env.CHANNEL_ID as string; // Replace with your Slack channel ID
+
 export async function sendAlert(token: string, channelId: string, message: string): Promise<void> {
     const url = 'https://slack.com/api/chat.postMessage';
 
@@ -40,8 +42,8 @@ export async function sendAlert(token: string, channelId: string, message: strin
 
 
 export async function sendSlackAlert(message:String){
-    const slackToken =  process.env.SLACK_BOT_TOKEN as string; // Replace with your Slack bot token
-    const channelId = process.env.CHANNEL_ID as string; // Replace with your Slack channel ID
+    
+   
       
       try {
         await sendAlert(slackToken, channelId, message as string);

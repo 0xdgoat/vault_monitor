@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendSlackAlert } from '../handlers/slackHandler';
-import 'dotenv/config';
 
 
 // Initialize Supabase client
