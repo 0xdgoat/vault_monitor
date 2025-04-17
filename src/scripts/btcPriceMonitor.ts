@@ -46,9 +46,9 @@ async function testSupabaseConnection() {
 testSupabaseConnection();
 
 // Depeg thresholds
-const WARNING_THRESHOLD = 0.5; // 0.5% depeg threshold
+const WARNING_THRESHOLD = 0.01; // 0.5% depeg threshold
 const CRITICAL_THRESHOLD = 1.0; // 1.0% depeg threshold
-const WARNING_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+const WARNING_DURATION_MS = 400  ; // 4 hours in milliseconds
 
 // Cache for BTC price
 let btcPriceCache: { price: number | null; timestamp: number } = { price: null, timestamp: 0 };

@@ -1,30 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
 
-// Load environment variables
-dotenv.config();
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL as string;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY as string;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Error: SUPABASE_URL and SUPABASE_SERVICE_KEY are required in the .env file.');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Create Supabase tables
-async function setupSupabase() {
-  try {
-    console.log('Generating SQL setup script...');
-    
-    const sqlStatements = [
-      // Raw Events Table
-      `
       CREATE TABLE IF NOT EXISTS raw_events (
         id TEXT PRIMARY KEY,
         event_type TEXT NOT NULL,
@@ -43,10 +17,8 @@ async function setupSupabase() {
       CREATE INDEX IF NOT EXISTS idx_raw_events_contract_address ON raw_events (contract_address);
       CREATE INDEX IF NOT EXISTS idx_raw_events_user_address ON raw_events (user_address);
       CREATE INDEX IF NOT EXISTS idx_raw_events_timestamp ON raw_events (timestamp);
-      `,
       
-      // Prices and Liquidity Table
-      `
+
       CREATE TABLE IF NOT EXISTS prices_and_liquidity (
         id SERIAL PRIMARY KEY,
         asset_id TEXT NOT NULL,
@@ -62,10 +34,8 @@ async function setupSupabase() {
       
       CREATE INDEX IF NOT EXISTS idx_prices_asset_id ON prices_and_liquidity (asset_id);
       CREATE INDEX IF NOT EXISTS idx_prices_timestamp ON prices_and_liquidity (timestamp);
-      `,
       
-      // Metrics Per Asset Table
-      `
+
       CREATE TABLE IF NOT EXISTS metrics_per_asset (
         id SERIAL PRIMARY KEY,
         asset_id TEXT NOT NULL,
@@ -79,10 +49,8 @@ async function setupSupabase() {
       );
       
       CREATE UNIQUE INDEX IF NOT EXISTS idx_metrics_asset_id ON metrics_per_asset (asset_id);
-      `,
       
-      // Positions Summary Table
-      `
+
       CREATE TABLE IF NOT EXISTS positions_summary (
         id SERIAL PRIMARY KEY,
         user_address TEXT UNIQUE NOT NULL,
@@ -96,10 +64,8 @@ async function setupSupabase() {
       
       CREATE INDEX IF NOT EXISTS idx_positions_user_address ON positions_summary (user_address);
       CREATE INDEX IF NOT EXISTS idx_positions_risk_level ON positions_summary (risk_level);
-      `,
       
-      // Protocol Health Table
-      `
+
       CREATE TABLE IF NOT EXISTS protocol_health (
         id SERIAL PRIMARY KEY,
         average_health_factor NUMERIC(24, 8),
@@ -112,10 +78,8 @@ async function setupSupabase() {
       );
       
       CREATE INDEX IF NOT EXISTS idx_protocol_updated_at ON protocol_health (updated_at);
-      `,
       
-      // BTC Price Monitoring Table
-      `
+
       CREATE TABLE IF NOT EXISTS btc_price_monitoring (
         id SERIAL PRIMARY KEY,
         btc_price DECIMAL NOT NULL,
@@ -123,10 +87,8 @@ async function setupSupabase() {
         price_difference_percent DECIMAL NOT NULL,
         timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
       );
-      `,
       
-      // Alerts Table
-      `
+
       CREATE TABLE IF NOT EXISTS alerts (
         id SERIAL PRIMARY KEY,
         type TEXT NOT NULL,
@@ -142,51 +104,4 @@ async function setupSupabase() {
       CREATE INDEX IF NOT EXISTS idx_alerts_user_address ON alerts (user_address);
       CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts (severity);
       CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts (timestamp);
-      `
-    ];
-
-    // Create SQL directory if it doesn't exist
-    const sqlDir = path.join(process.cwd(), 'sql');
-    if (!fs.existsSync(sqlDir)) {
-      fs.mkdirSync(sqlDir);
-    }
-
-    // Write SQL statements to a file
-    const setupSqlPath = path.join(sqlDir, 'setup.sql');
-    fs.writeFileSync(setupSqlPath, sqlStatements.join('\n'));
-
-    console.log(`
-SQL setup script has been generated at: ${setupSqlPath}
-
-To set up your Supabase database:
-1. Go to your Supabase project dashboard
-2. Navigate to the SQL Editor
-3. Copy the contents of ${setupSqlPath}
-4. Paste the SQL into the editor
-5. Click "Run" to execute the statements
-
-After running the SQL statements, your database tables will be created.
-    `);
-    
-    // Test connection to Supabase
-    const { data, error } = await supabase.from('raw_events').select('id').limit(1);
-    if (error && error.code === 'PGRST116') {
-      console.log('Tables not created yet. Please follow the instructions above to create them.');
-    } else if (error) {
-      console.error('Error connecting to Supabase:', error);
-    } else {
-      console.log('Successfully connected to Supabase!');
-    }
-    
-  } catch (error) {
-    console.error('Error:', error);
-    throw error;
-  }
-}
-
-// Run the setup if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  setupSupabase().catch(console.error);
-}
-
-export default setupSupabase; 
+      
