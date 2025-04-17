@@ -110,6 +110,16 @@ async function setupSupabase() {
     CREATE INDEX IF NOT EXISTS idx_protocol_updated_at ON protocol_health (updated_at);
     `;
     
+    const createBtcPriceMonitoringTable = `
+    CREATE TABLE IF NOT EXISTS btc_price_monitoring (
+      id SERIAL PRIMARY KEY,
+      btc_price DECIMAL NOT NULL,
+      ubtc_price DECIMAL NOT NULL,
+      price_difference_percent DECIMAL NOT NULL,
+      timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    `;
+    
     const createAlertsTable = `
     CREATE TABLE IF NOT EXISTS alerts (
       id SERIAL PRIMARY KEY,
@@ -117,28 +127,8 @@ async function setupSupabase() {
       user_address TEXT,
       message TEXT NOT NULL,
       severity TEXT NOT NULL,
-      acknowledged BOOLEAN DEFAULT false,
-      timestamp TIMESTAMPTZ NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT now()
+      timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-    
-    CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts (type);
-    CREATE INDEX IF NOT EXISTS idx_alerts_user_address ON alerts (user_address);
-    CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts (severity);
-    CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts (timestamp);
-    `;
-    
-    const createBtcPriceMonitoringTable = `
-    CREATE TABLE IF NOT EXISTS btc_price_monitoring (
-      id SERIAL PRIMARY KEY,
-      btc_price NUMERIC(24, 8) NOT NULL,
-      ubtc_price NUMERIC(24, 8) NOT NULL,
-      price_difference_percent NUMERIC(10, 4) NOT NULL,
-      timestamp TIMESTAMPTZ NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT now()
-    );
-    
-    CREATE INDEX IF NOT EXISTS idx_btc_price_monitoring_timestamp ON btc_price_monitoring (timestamp);
     `;
     
     console.log(
@@ -148,8 +138,8 @@ async function setupSupabase() {
       createMetricsPerAssetTable + '\n\n' +
       createPositionsSummaryTable + '\n\n' +
       createProtocolHealthTable + '\n\n' +
-      createAlertsTable + '\n\n' +
-      createBtcPriceMonitoringTable
+      createBtcPriceMonitoringTable + '\n\n' +
+      createAlertsTable
     );
     
     console.log('\nIn a production environment, these would be executed programmatically.');

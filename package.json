@@ -18,8 +18,8 @@
     "chunk-index": "tsx src/scripts/chunkIndexer.ts",
     "sync-latest": "TARGET_BLOCK=20030000 tsx src/scripts/chunkIndexer.ts",
     "test-rpc": "tsx src/scripts/testRpc.ts",
-    "monitor": "tsx src/scripts/monitor.ts",
-    "dashboard": "node src/dashboard/index.js"
+    "dashboard": "node src/dashboard/index.js",
+    "monitor-btc": "tsx src/scripts/btcPriceMonitor.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
