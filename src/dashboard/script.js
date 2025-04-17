@@ -104,6 +104,44 @@ async function getBtcPrice() {
   }
 }
 
+// Fetch current BTC price from Hyperliquid
+let btcPriceHLCache = { price: null, timestamp: 0 }; // Keep frontend cache simple
+async function getBtcPriceFromHL() {
+  const now = Date.now();
+  // Use frontend cache first (short duration, backend handles main caching/rate limiting)
+  if (btcPriceHLCache.price !== null && (now - btcPriceHLCache.timestamp < 10000)) { // e.g., 10 second frontend cache
+    console.log('[FRONTEND CACHE] Using cached BTC price from HL:', btcPriceHLCache.price);
+    return btcPriceHLCache.price;
+  }
+
+  console.log('[FRONTEND API] Attempting to fetch BTC price from HL proxy /btc-price-hl ...');
+  try {
+    // Fetch from our backend proxy endpoint
+    const response = await fetch('/btc-price-hl'); // Relative path to our server endpoint
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})); // Try to parse error
+      console.error(`[FRONTEND API ERROR] Proxy response not OK: ${response.status} ${response.statusText}. Error: ${errorData.error || 'Unknown'}`);
+      return null; // Indicate error to callers
+    }
+
+    const data = await response.json();
+
+    if (data && typeof data.price === 'number') {
+      const price = data.price;
+      console.log('[FRONTEND API SUCCESS] Fetched BTC price via HL proxy:', price);
+      btcPriceHLCache = { price: price, timestamp: now }; // Update frontend cache
+      return price;
+    } else {
+      console.error('[FRONTEND API ERROR] Invalid data structure received from proxy:', data);
+      return null; // Indicate error to callers
+    }
+  } catch (error) {
+    console.error('[FRONTEND CATCH ERROR] Error fetching BTC price from HL proxy:', error);
+    return null; // Indicate error to callers
+  }
+}
+
 async function fetchData(query) {
   try {
     console.log('Attempting to fetch from GraphQL endpoint... Query:', query.trim().substring(0, 100) + '...');

@@ -292,8 +292,10 @@ app.get("/api/historical-l1-data", async (c) => {
   }
 });
 
+
 app.post("/api/test-alerts", async (c) => {
   const alertMessage = 'This is a test alert from the Slack bot!';
+
   
   try {
     await sendSlackAlert(alertMessage);
