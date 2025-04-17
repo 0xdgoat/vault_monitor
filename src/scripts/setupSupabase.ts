@@ -128,6 +128,19 @@ async function setupSupabase() {
     CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts (timestamp);
     `;
     
+    const createBtcPriceMonitoringTable = `
+    CREATE TABLE IF NOT EXISTS btc_price_monitoring (
+      id SERIAL PRIMARY KEY,
+      btc_price NUMERIC(24, 8) NOT NULL,
+      ubtc_price NUMERIC(24, 8) NOT NULL,
+      price_difference_percent NUMERIC(10, 4) NOT NULL,
+      timestamp TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_btc_price_monitoring_timestamp ON btc_price_monitoring (timestamp);
+    `;
+    
     console.log(
       'IMPORTANT: Execute the following SQL statements in the Supabase SQL editor:\n\n' +
       createRawEventsTable + '\n\n' +
@@ -135,7 +148,8 @@ async function setupSupabase() {
       createMetricsPerAssetTable + '\n\n' +
       createPositionsSummaryTable + '\n\n' +
       createProtocolHealthTable + '\n\n' +
-      createAlertsTable
+      createAlertsTable + '\n\n' +
+      createBtcPriceMonitoringTable
     );
     
     console.log('\nIn a production environment, these would be executed programmatically.');
