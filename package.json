@@ -23,8 +23,11 @@
     "monitor-btc": "tsx src/scripts/btcPriceMonitor.ts"
   },
   "dependencies": {
+    "@bitcoinerlab/discovery": "^1.4.0",
+    "@bitcoinerlab/explorer": "^0.4.0",
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.8.4",
+    "bitcoinjs-lib": "^6.1.7",
     "cors": "^2.8.5",
     "cron": "^3.5.0",
     "dotenv": "^16.4.7",
@@ -37,6 +40,7 @@
     "viem": "^2.21.3"
   },
   "devDependencies": {
+    "@types/bitcoinjs-lib": "^4.0.1",
     "@types/cron": "^2.4.3",
     "@types/node": "^22.14.1",
     "@types/node-fetch": "^2.6.12",

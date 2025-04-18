@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
 
     // Language and environment
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "module": "ESNext",
     "noEmit": true,
     "lib": ["ES2022"],

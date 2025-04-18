@@ -1,88 +1,66 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 import fetch from 'node-fetch';
+import { EsploraExplorer } from '@bitcoinerlab/explorer';
+import * as bitcoin from 'bitcoinjs-lib';
+
+// Type declarations
+interface UTXO {
+    txid: string;
+    vout: number;
+    value: number;
+    status: {
+        confirmed: boolean;
+        block_height?: number;
+        block_hash?: string;
+        block_time?: number;
+    };
+}
+
+interface Cache {
+    price: number;
+    timestamp: number;
+}
+
+interface LiquidityCache {
+    liquidity: number;
+    timestamp: number;
+}
+
+interface BtcLiquidityCache {
+    [address: string]: LiquidityCache;
+}
+
+// Initialize Bitcoin network and explorer
+const network = bitcoin.networks.bitcoin;
+const explorer = new EsploraExplorer({ url: 'https://blockstream.info/api' });
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL as string;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY as string;
-
-// Log environment variables (without exposing sensitive data)
-console.log('Supabase URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
-console.log('Supabase Key:', supabaseKey ? '✅ Set' : '❌ Missing');
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Error: SUPABASE_URL and SUPABASE_SERVICE_KEY are required in the .env file.');
-  process.exit(1);
-}
-
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Test Supabase connection
-async function testSupabaseConnection() {
-  try {
-    console.log('Testing Supabase connection...');
-    const { data, error } = await supabase.from('btc_price_monitoring').select('id').limit(1);
-    if (error) {
-      if (error.code === '42P01') { // Table does not exist
-        console.error('Table btc_price_monitoring does not exist. Please run the setup script first.');
-      } else {
-        console.error('Error connecting to Supabase:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-      }
-      process.exit(1);
-    }
-    console.log('Successfully connected to Supabase');
-  } catch (error) {
-    console.error('Failed to connect to Supabase:', error);
-    process.exit(1);
-  }
-}
-
-// Test connection before starting monitoring
-testSupabaseConnection();
-
-// Depeg thresholds
-const WARNING_THRESHOLD = 0.01; // 0.5% depeg threshold
-const CRITICAL_THRESHOLD = 1.0; // 1.0% depeg threshold
-const WARNING_DURATION_MS = 400  ; // 4 hours in milliseconds
-
-// Cache for BTC price
-let btcPriceCache: { price: number | null; timestamp: number } = { price: null, timestamp: 0 };
-const BTC_CACHE_DURATION_MS = 10 * 1000; // 10 seconds
-
-// Cache for uBTC price
-let ubtcPriceCache: { price: number | null; timestamp: number } = { price: null, timestamp: 0 };
-const UBTC_CACHE_DURATION_MS = 10 * 1000; // 10 seconds
+// Initialize caches
+let btcPriceCache: Cache = { price: 0, timestamp: 0 };
+let ubtcPriceCache: Cache = { price: 0, timestamp: 0 };
+const btcLiquidityCache: BtcLiquidityCache = {};
+const ubtcLiquidityCache: BtcLiquidityCache = {};
 
 // Track depeg duration
 let depegStartTime: number | null = null;
-let lastAlertTime: number = 0;
+let lastAlertTime = 0;
 const ALERT_COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes between alerts
-
-interface CoinGeckoResponse {
-  bitcoin: {
-    usd: number;
-  };
-}
-
-interface HyperliquidResponse {
-  [key: string]: number;
-}
 
 async function getBtcPrice(): Promise<number | null> {
   const now = Date.now();
-  if (btcPriceCache.price !== null && (now - btcPriceCache.timestamp < BTC_CACHE_DURATION_MS)) {
+  if (btcPriceCache.price !== null && (now - btcPriceCache.timestamp < 60000)) {
     console.log('[CACHE] Using cached BTC price:', btcPriceCache.price);
     return btcPriceCache.price;
   }
 
   try {
     const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
-    const data = await response.json() as CoinGeckoResponse;
+    const data = await response.json();
     const price = data.bitcoin?.usd ?? null;
     
     btcPriceCache = { price, timestamp: now };
@@ -96,7 +74,7 @@ async function getBtcPrice(): Promise<number | null> {
 
 async function getUBtcPrice(): Promise<number | null> {
   const now = Date.now();
-  if (ubtcPriceCache.price !== null && (now - ubtcPriceCache.timestamp < UBTC_CACHE_DURATION_MS)) {
+  if (ubtcPriceCache.price !== null && (now - ubtcPriceCache.timestamp < 60000)) {
     console.log('[CACHE] Using cached uBTC price:', ubtcPriceCache.price);
     return ubtcPriceCache.price;
   }
@@ -111,7 +89,7 @@ async function getUBtcPrice(): Promise<number | null> {
         type: "allMids"
       })
     });
-    const data = await response.json() as HyperliquidResponse;
+    const data = await response.json();
     const price = data["@142"] ?? null;
     
     ubtcPriceCache = { price, timestamp: now };
@@ -123,50 +101,74 @@ async function getUBtcPrice(): Promise<number | null> {
   }
 }
 
-async function checkDepegStatus(priceDifferencePercent: number) {
+async function getUBtcLiquidity(address: string): Promise<number> {
   const now = Date.now();
-  const absDifference = Math.abs(priceDifferencePercent);
-
-  // Check if we're above warning threshold
-  if (absDifference > WARNING_THRESHOLD) {
-    if (depegStartTime === null) {
-      depegStartTime = now;
-    }
-
-    const depegDuration = now - depegStartTime;
-    
-    // Check if we've exceeded the warning duration
-    if (depegDuration >= WARNING_DURATION_MS && (now - lastAlertTime) >= ALERT_COOLDOWN_MS) {
-      console.warn(`⚠️ WARNING: UBTC has been depegged by ${absDifference.toFixed(2)}% for more than 4 hours!`);
-      lastAlertTime = now;
-      
-      // Store alert in Supabase
-      await supabase.from('alerts').insert({
-        type: 'depeg_warning',
-        message: `UBTC has been depegged by ${absDifference.toFixed(2)}% for more than 4 hours`,
-        severity: 'warning',
-        timestamp: new Date().toISOString()
-      });
-    }
-  } else {
-    depegStartTime = null;
+  const cached = ubtcLiquidityCache[address];
+  
+  if (cached && now - cached.timestamp < 60000) {
+    console.log('[CACHE] Using cached uBTC liquidity:', cached.liquidity);
+    return cached.liquidity;
   }
 
-  // Check critical threshold
-  if (absDifference > CRITICAL_THRESHOLD && (now - lastAlertTime) >= ALERT_COOLDOWN_MS) {
-    console.error(`🚨 CRITICAL: UBTC has depegged by ${absDifference.toFixed(2)}%!`);
-    lastAlertTime = now;
-    
-    // Store critical alert in Supabase
-    await supabase.from('alerts').insert({
-      type: 'depeg_critical',
-      message: `UBTC has depegged by ${absDifference.toFixed(2)}% - Borrows should be paused immediately`,
-      severity: 'critical',
-      timestamp: new Date().toISOString()
+  try {
+    const response = await fetch('https://api.hyperliquid.xyz/info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({  
+        type: "spotClearinghouseState",
+        user:  address
+      })
     });
+    
+    const data = await response.json();
+    for (let i = 0; i < data.balances.length; i++) {
+      if (data.balances[i]?.coin === "UBTC") {
+        const liquidity = 21000000 - parseFloat(data.balances[i]?.total ?? "0");
+        
+        ubtcLiquidityCache[address] = { liquidity, timestamp: now };
+        console.log('[API] Fetched uBTC liquidity:', liquidity);
+        return liquidity;
+      }
+    }
 
-    // TODO: Implement borrow pause mechanism
-    console.log('🚨 Borrows should be paused immediately');
+    return 0;
+  } catch (error) {
+    console.error('Error fetching uBTC liquidity:', error);
+    return 0;
+  }
+}
+
+async function getBtcLiquidity(address: string): Promise<number> {
+  try {
+    if (!address) {
+      console.error('BTC address is not set in environment variables');
+      return 0;
+    }
+
+    const now = Date.now();
+    const cached = btcLiquidityCache[address];
+    
+    if (cached && now - cached.timestamp < 60000) {
+      return cached.liquidity;
+    }
+
+    const response = await fetch(`https://blockstream.info/api/address/${address}/utxo`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch UTXOs: ${response.status} ${response.statusText}`);
+    }
+    
+    const utxos: UTXO[] = await response.json();
+    const liquidity = utxos.reduce((sum: number, utxo: UTXO) => sum + utxo.value, 0);
+
+    btcLiquidityCache[address] = {
+      liquidity,
+      timestamp: now
+    };
+
+    return liquidity;
+  } catch (error) {
+    console.error('Error getting BTC liquidity:', error);
+    return 0;
   }
 }
 
@@ -174,6 +176,8 @@ async function monitorPrices() {
   try {
     const btcPrice = await getBtcPrice();
     const ubtcPrice = await getUBtcPrice();
+    const btcLiquidity = await getBtcLiquidity(process.env.UNIT_BTC_CHAIN_ADDRESS || '');
+    const ubtcLiquidity = await getUBtcLiquidity(process.env.UNIT_BTC_HL_ADDRESS || '');
 
     if (btcPrice === null || ubtcPrice === null) {
       console.error('Failed to fetch one or both prices');
@@ -182,45 +186,42 @@ async function monitorPrices() {
 
     // Calculate price difference percentage
     const priceDifferencePercent = ((ubtcPrice - btcPrice) / btcPrice) * 100;
-    console.log("priceDifferencePercent:", priceDifferencePercent);
-    // Check depeg status
-    await checkDepegStatus(priceDifferencePercent);
+    console.log("Price Difference Percent:", priceDifferencePercent);
+    
+    // Log liquidity information
+    console.log("BTC Liquidity:", btcLiquidity/100000000, "BTC");
+    console.log("uBTC Liquidity:", ubtcLiquidity, "uBTC");
+
+    // Prepare data for Supabase
+    const insertData = {
+      btc_price: Number(btcPrice),
+      ubtc_price: Number(ubtcPrice),
+      btc_liquidity: Number(btcLiquidity/100000000),
+      ubtc_liquidity: Number(ubtcLiquidity),
+      price_difference_percent: Number(priceDifferencePercent),
+      timestamp: new Date().toISOString()
+    };
+
+    // Log the data we're trying to insert
+    console.log('Attempting to insert data:', JSON.stringify(insertData, null, 2));
 
     // Store in Supabase
     try {
       const { data, error } = await supabase
-        .from('btc_price_monitoring')
-        .insert({
-          btc_price: btcPrice,
-          ubtc_price: ubtcPrice,
-          price_difference_percent: priceDifferencePercent,
-          timestamp: new Date().toISOString()
-        });
+        .from('btc_price_monitoring')  // Changed table name to match schema
+        .insert([insertData]);
 
       if (error) {
-        console.error('Error storing prices in Supabase:', {
+        console.error('Error storing prices in Supabase:', error);
+        console.error('Error details:', {
           message: error.message,
-          code: error.code,
           details: error.details,
           hint: error.hint,
-          error: error
+          code: error.code
         });
-        
-        // Check if table exists
-        const { data: tableExists } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_name', 'btc_price_monitoring')
-          .single();
-          
-        if (!tableExists) {
-          console.error('Table btc_price_monitoring does not exist in the database');
-        }
       } else {
-        console.log('Successfully stored prices in Supabase');
-        console.log(`BTC Price: $${btcPrice}`);
-        console.log(`uBTC Price: $${ubtcPrice}`);
-        console.log(`Price Difference: ${priceDifferencePercent.toFixed(4)}%`);
+        console.log('Successfully stored prices and liquidity in Supabase');
+        
       }
     } catch (error) {
       console.error('Unexpected error while storing prices:', error);

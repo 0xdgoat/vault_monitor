@@ -1,6 +1,10 @@
+// @ts-ignore - ignore missing type declarations
 import { Hono } from "hono";
+// @ts-ignore - ignore missing type declarations
 import { db } from "ponder:api";
+// @ts-ignore - ignore missing type declarations
 import schema from "ponder:schema";
+// @ts-ignore - ignore missing type declarations
 import { graphql } from "ponder";
 import { sendSlackAlert } from "../handlers/slackHandler";
 

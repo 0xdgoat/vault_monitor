@@ -84,6 +84,8 @@
         id SERIAL PRIMARY KEY,
         btc_price DECIMAL NOT NULL,
         ubtc_price DECIMAL NOT NULL,
+        btc_liquidity DECIMAL NOT NULL,
+        ubtc_liquidity DECIMAL NOT NULL,
         price_difference_percent DECIMAL NOT NULL,
         timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
       );
