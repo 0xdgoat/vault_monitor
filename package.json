@@ -20,7 +20,9 @@
     "test-rpc": "tsx src/scripts/testRpc.ts",
     "monitor": "tsx src/scripts/monitor.ts",
     "dashboard": "node src/dashboard/index.js",
-    "monitor-btc": "tsx src/scripts/btcPriceMonitor.ts"
+    "monitor-btc": "tsx src/scripts/btcPriceMonitor.ts",
+    "test-guardian": "tsx src/scripts/testGuardianMonitor.ts",
+    "gen-address": "tsx src/scripts/unitAddressGenerator.ts"
   },
   "dependencies": {
     "@bitcoinerlab/discovery": "^1.4.0",
