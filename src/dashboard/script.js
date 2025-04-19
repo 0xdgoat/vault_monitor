@@ -104,6 +104,7 @@ async function getBtcPrice() {
   }
 }
 
+
 async function fetchData(query) {
   try {
     console.log('Attempting to fetch from GraphQL endpoint... Query:', query.trim().substring(0, 100) + '...');

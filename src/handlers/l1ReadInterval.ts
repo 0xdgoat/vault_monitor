@@ -188,6 +188,7 @@ ponder.on("L1Read:block", async (args: any) => {
       });
     console.log(`Inserted vaultEquity history ${equity} for ${vaultAddress} at block ${blockNumber}`);
 
+    
     // Create new ID for spot balance based on vault, token, and block number
     const spotBalanceId = `${vaultAddress.toLowerCase()}-${spotTokenId}-${blockNumber}`;
     
