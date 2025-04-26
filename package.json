@@ -27,6 +27,8 @@
   "dependencies": {
     "@bitcoinerlab/discovery": "^1.4.0",
     "@bitcoinerlab/explorer": "^0.4.0",
+    "@noble/curves": "^1.8.2",
+    "@noble/hashes": "^1.8.0",
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.8.4",
     "bitcoinjs-lib": "^6.1.7",
@@ -37,17 +39,17 @@
     "hono": "^4.5.0",
     "node-fetch": "2",
     "ponder": "0.10.3",
-    "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
     "viem": "^2.21.3"
   },
   "devDependencies": {
     "@types/bitcoinjs-lib": "^4.0.1",
     "@types/cron": "^2.4.3",
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.15.2",
     "@types/node-fetch": "^2.6.12",
     "eslint": "^8.53.0",
     "eslint-config-ponder": "^0.10.4",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
   "engines": {
