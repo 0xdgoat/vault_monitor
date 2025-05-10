@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "reset": "rm -rf db && yarn cache clean && ./retry-sync.sh",
+    "reset": "rm -rf db && yarn cache clean",
     "dev": "ponder dev",
     "start": "ponder start",
     "db": "ponder db",
@@ -19,11 +19,19 @@
     "sync-latest": "TARGET_BLOCK=20030000 tsx src/scripts/chunkIndexer.ts",
     "test-rpc": "tsx src/scripts/testRpc.ts",
     "monitor": "tsx src/scripts/monitor.ts",
-    "dashboard": "node src/dashboard/index.js"
+    "dashboard": "node src/dashboard/index.js",
+    "monitor-btc": "tsx src/scripts/btcPriceMonitor.ts",
+    "test-guardian": "tsx src/scripts/testGuardianMonitor.ts",
+    "gen-address": "tsx src/scripts/unitAddressGenerator.ts"
   },
   "dependencies": {
+    "@bitcoinerlab/discovery": "^1.4.0",
+    "@bitcoinerlab/explorer": "^0.4.0",
+    "@noble/curves": "^1.8.2",
+    "@noble/hashes": "^1.8.0",
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.8.4",
+    "bitcoinjs-lib": "^6.1.7",
     "cors": "^2.8.5",
     "cron": "^3.5.0",
     "dotenv": "^16.4.7",
@@ -35,12 +43,14 @@
     "viem": "^2.21.3"
   },
   "devDependencies": {
+    "@types/bitcoinjs-lib": "^4.0.1",
     "@types/cron": "^2.4.3",
-    "@types/node": "^20.9.0",
+    "@types/node": "^22.15.2",
     "@types/node-fetch": "^2.6.12",
     "eslint": "^8.53.0",
     "eslint-config-ponder": "^0.10.4",
-    "typescript": "^5.2.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18.14"

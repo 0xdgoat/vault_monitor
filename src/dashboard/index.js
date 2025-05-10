@@ -162,6 +162,83 @@ app.get('/hlp-details', async (req, res) => {
 });
 // --- End HLP Vault Details Proxy Logic ---
 
+// --- Add BTC Price from HL Logic ---
+let btcPriceHLCache = { price: null, timestamp: 0, error: null };
+const BTC_PRICE_CACHE_DURATION_MS = 60 * 4 * 1000; // Cache for 4 minutes
+
+async function fetchUBtcPrice() {
+    const now = Date.now();
+    if (btcPriceHLCache.price !== null && (now - btcPriceHLCache.timestamp < BTC_PRICE_CACHE_DURATION_MS)) {
+        console.log('[HL CACHE] Using cached BTC price from HL:', btcPriceHLCache.price);
+        return { price: btcPriceHLCache.price };
+    }
+    if (btcPriceHLCache.error !== null && (now - btcPriceHLCache.timestamp < CACHE_DURATION_MS)) {
+        console.log('[HL CACHE] Using cached error:', btcPriceHLCache.error);
+        return { error: btcPriceHLCache.error };
+    }
+
+    console.log('[HL API] Fetching BTC price from Hyperliquid...');
+    try {
+        const requestBody = {
+            type: "allMids"
+        };
+
+        const response = await fetch('https://api.hyperliquid.xyz/info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const responseBody = await response.text();
+        console.log(`[HL API] Response Status: ${response.status}`);
+
+        if (!response.ok) {
+            const errorMsg = `Hyperliquid API Error: ${response.status} ${response.statusText}`;
+            console.error(`[HL API ERROR] ${errorMsg}. Body: ${responseBody}`);
+            btcPriceHLCache = { price: btcPriceHLCache.price, timestamp: now, error: errorMsg };
+            return { error: errorMsg, status: response.status };
+        }
+
+        const data = JSON.parse(responseBody);
+        // Look for BTC price under "@142" key
+        if (data && data["@142"]) {
+            const price = parseFloat(data["@142"]);
+            if (!isNaN(price)) {
+                console.log('[HL API SUCCESS] Fetched BTC price:', price);
+                btcPriceHLCache = { price: price, timestamp: now, error: null };
+                return { price: price };
+            } else {
+                const errorMsg = 'Invalid BTC price format from Hyperliquid API';
+                console.error('[HL API ERROR]', errorMsg, data);
+                btcPriceHLCache = { price: btcPriceHLCache.price, timestamp: now, error: errorMsg };
+                return { error: errorMsg };
+            }
+        } else {
+            const errorMsg = 'BTC price not found in Hyperliquid API response';
+            console.error('[HL API ERROR]', errorMsg, data);
+            btcPriceHLCache = { price: btcPriceHLCache.price, timestamp: now, error: errorMsg };
+            return { error: errorMsg };
+        }
+    } catch (error) {
+        const errorMsg = `Network error fetching BTC price from HL: ${error.message}`;
+        console.error('[HL CATCH ERROR]', errorMsg);
+        btcPriceHLCache = { price: btcPriceHLCache.price, timestamp: now, error: errorMsg };
+        return { error: errorMsg };
+    }
+}
+
+// Define the proxy route
+app.get('/ubtc-price', async (req, res) => {
+    const result = await fetchUBtcPrice();
+    if (result.error) {
+        res.status(result.status || 500).json({ error: result.error });
+    } else {
+        res.status(200).json({ price: result.price });
+    }
+});
+
 // Default route redirects to index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));

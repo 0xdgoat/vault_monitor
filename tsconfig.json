@@ -12,10 +12,10 @@
     "resolveJsonModule": true,
 
     // Language and environment
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "module": "ESNext",
     "noEmit": true,
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "target": "ES2022",
 
     // Skip type checking for node modules

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
+import { sendSlackAlert } from '../handlers/slackHandler';
+
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL as string;
@@ -88,6 +89,7 @@ async function calculateRiskMetrics() {
       
       // Create alerts for high-risk positions
       if (riskLevel === 'critical' || riskLevel === 'high') {
+
         await supabase.from('alerts').insert({
           type: 'liquidation_risk',
           user_address: userAddress,
@@ -96,6 +98,14 @@ async function calculateRiskMetrics() {
           timestamp,
           acknowledged: false,
         });
+
+        try {
+            await sendSlackAlert(`${riskLevel} Liquidation risk: Health factor for ${userAddress} is ${healthFactor.toFixed(2)}`);
+            
+          } catch (error) {
+            console.error("Error sending Slack alert:", error);
+            
+          }
       }
     }
     
